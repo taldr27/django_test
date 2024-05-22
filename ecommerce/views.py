@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleCreateSerializer, SaleModel, SaleDetailModel
 from cloudinary.uploader import upload
 from django.contrib.auth.models import User
 from pprint import pprint
@@ -61,7 +61,7 @@ class SaleView(generics.ListAPIView):
         
 class SaleCreateView(generics.CreateAPIView):
     queryset = SaleModel.objects.all()
-    serializer_class = SaleSerializer
+    serializer_class = SaleCreateSerializer
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
