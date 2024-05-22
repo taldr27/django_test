@@ -1,8 +1,10 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel, SaleDetailModel
 from cloudinary.uploader import upload
+from django.contrib.auth.models import User
 from pprint import pprint
+from django.db import transaction
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()
@@ -61,17 +63,41 @@ class SaleCreateView(generics.CreateAPIView):
     queryset = SaleModel.objects.all()
     serializer_class = SaleSerializer
     
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
+            serializer = self.serializer_class(data=data)
+            serializer.is_valid(raise_exception=True)
             
-            for item in data['detail']:
-                productId = item['product_id']
+            user = User.objects.get(id=data['user_id'])
+            
+            sale = SaleModel.objects.create(
+                total=data['total'],
+                user_id=user,
+            )
+            sale.save()
+            
+            for item in data['details']:
+                product_id = item['product_id']
                 quantity = item['quantity']
                 
-                product = ProductModel.objects.get(id=productId)
+                product = ProductModel.objects.get(id=product_id)
                 if product.stock < quantity:
                     raise Exception(f'Product {product.name} has insufficient stock in the store!')
+                
+                product.stock -= quantity
+                product.save()
+                
+                sale_detail = SaleDetailModel.objects.create(
+                    quantity=quantity,
+                    price=item['price'],
+                    subtotal=item['subtotal'],
+                    product_id=product,
+                    sale_id=sale
+                )
+                
+                sale_detail.save()
                 
             return Response({'message': 'Sale created!'}, status=status.HTTP_201_CREATED)
         except Exception as e:
