@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleSerializer, SaleModel
 from cloudinary.uploader import upload
 from pprint import pprint
 
@@ -53,3 +53,35 @@ class ProductUploadImageView(generics.GenericAPIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+class SaleView(generics.ListAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+        
+class SaleCreateView(generics.CreateAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+    
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            
+            for item in data['detail']:
+                productId = item['product_id']
+                quantity = item['quantity']
+                
+                product = ProductModel.objects.get(id=productId)
+                if product.stock < quantity:
+                    raise Exception(f'Product {product.name} has insufficient stock in the store!')
+                
+            return Response({'message': 'Sale created!'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+class SaleUpdateView(generics.UpdateAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+    
+class SaleDeleteView(generics.DestroyAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+    
